@@ -9,29 +9,49 @@
 // @grant        none
 // ==/UserScript==
 
-const customBadges = [
-    {
-        name: "Tournament",
-        color: "#DE49A1",
-        mapsets: [923488,1790641, 1733246,1886586,1609920,1879420,1835578,1355025,1154288,1739478,1894296,1790912,1897353,1738121,1822213,1872124,1868797,1683645,1891040,1817125,1803122,1461060,1812360,1896952,1897323,1869628,1890060,1812755,1883219,1880007,1846313,1851016,1877965,1843780,1887982,1811044,1602254,1888901,1819057,1386859,1145548,1842792,1864157,1808052,1766665,1846926,1863866,1889166,1873779,1884565,1842481,1847997,1868244,1882292,1795649,1894662,1680764,1411131,1892233,1897404,1813822,1870057,1865696,1853971,1420479,1848285,1737435],
-        slot: "title"
-    }
+/*
+    Enter badge sources urls below
+*/
+
+const customBadgeSources = [
+    "https://raw.githubusercontent.com/IceDynamix/CustomOsuMapsetBadges/main/badge_sets/world_cup_maps/world_cup_maps.json"
 ];
 
-let reverseDictionary = {};
+// ---------------- ACTUAL CODE BELOW -------------------
 
-for (const {name, color, mapsets, slot} of customBadges) {
-    const badge = {name, color, slot};
-    for (const mapset of mapsets) {
-        if (mapset in reverseDictionary) {
-            reverseDictionary[mapset].push(badge);
+async function fetchCustomBadges(sources) {
+    let allBadges = [];
+
+    for (const source of sources) {
+        let response = await fetch(source);
+        if (response.ok) {
+            let badges = await response.json();
+            console.log(`Fetched ${badges.length} badges for custom badge source ${source}`)
+            allBadges.push(...badges);
         } else {
-            reverseDictionary[mapset] = [badge];
+            console.error(`Could not fetch data for custom badge source ${source}`);
         }
     }
+
+    return allBadges;
 }
 
-const getBadgesForMapset = (id) => reverseDictionary[id] || [];
+function constructReverseDictionary(badges) {
+    let reverseDictionary = {};
+
+    for (const {name, color, mapsets, slot} of badges) {
+        const badge = {name, color, slot};
+        for (const mapset of mapsets) {
+            if (mapset in reverseDictionary) {
+                reverseDictionary[mapset].push(badge);
+            } else {
+                reverseDictionary[mapset] = [badge];
+            }
+        }
+    }
+
+    return reverseDictionary;
+}
 
 const parseMapsetIdFromUrl = (url) => parseInt(/(\d+)$/s.exec(url)[1]);
 
@@ -43,7 +63,7 @@ const createBadgeNode = (name, color) => {
     return span;
 }
 
-function addBadgesToMapsetElement(mapsetElement) {
+function addBadgesToMapsetElement(mapsetElement, mapBadgeDictionary) {
     // See bottom of function
     const loadedFlagClass = "beatmapset-panel__custom-badges-loaded";
     if (mapsetElement.classList.contains(loadedFlagClass)) return;
@@ -51,7 +71,7 @@ function addBadgesToMapsetElement(mapsetElement) {
     const url = mapsetElement.querySelector(".beatmapset-panel__main-link").href;
     const mapsetId = parseMapsetIdFromUrl(url);
 
-    const badges = getBadgesForMapset(mapsetId);
+    const badges = mapBadgeDictionary[mapsetId] || [];
 
     for (const {name, color, slot} of badges) {
         const rowElement = mapsetElement.querySelector(`.beatmapset-panel__info-row--${slot}`);
@@ -76,15 +96,15 @@ function addBadgesToMapsetElement(mapsetElement) {
     mapsetElement.classList.add(loadedFlagClass);
 }
 
-function refreshAllMapsets(mutationList, observer) {
+function refreshAllMapsets(mapBadgeDictionary) {
     const mapsetElements = document.querySelectorAll(".beatmapset-panel");
     for (const mapsetElement of mapsetElements) {
-        addBadgesToMapsetElement(mapsetElement);
+        addBadgesToMapsetElement(mapsetElement, mapBadgeDictionary);
     }
 }
 
-function setupObservers() {
-    const observer = new MutationObserver(refreshAllMapsets);
+function setupObservers(mapBadgeDictionary) {
+    const observer = new MutationObserver(() => refreshAllMapsets(mapBadgeDictionary));
 
     const addObserver = (selector, config) => {
         const el = document.querySelector(selector);
@@ -102,11 +122,16 @@ function setupObservers() {
 (function () {
     'use strict';
 
-    // waits until the website has finished loading
+    // waits until the website has finished loading because osu loads data incrementally
     window.addEventListener("load", function () {
-        // initial pass over all mapset elements
-        refreshAllMapsets();
-        // add badges to new mapset elements loaded by smooth pagination
-        setupObservers();
+        fetchCustomBadges(customBadgeSources).then(badges => {
+            console.log(badges);
+            const mapBadgeDictionary = constructReverseDictionary(badges);
+
+            // initial pass over all mapset elements
+            refreshAllMapsets(mapBadgeDictionary);
+            // add badges to new mapset elements loaded by smooth pagination
+            setupObservers(mapBadgeDictionary);
+        }).catch(console.error);
     });
 })();
