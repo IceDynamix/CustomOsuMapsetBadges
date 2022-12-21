@@ -5,6 +5,8 @@ The script can fetch other badge sets from external sources defined at the top o
 The default install comes with badges for the osu! world cups.
 The script is active on all pages that use beatmap panels, most notably the beatmap listing and the userpage.
 
+![opera_2022-12-21_23-00-13](https://user-images.githubusercontent.com/22303902/209010428-1448d462-4f29-48da-897c-d943ea7c7963.png)
+
 ## Install
 
 1. Requires a userscript manager of your choice (Tampermonkey for Chrome or Greasemonkey for Firefox)
