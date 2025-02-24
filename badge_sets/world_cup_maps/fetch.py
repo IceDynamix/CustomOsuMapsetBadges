@@ -18,7 +18,8 @@ if os.path.exists(wiki_local_dir):
 else:
     # only fetch the relevant tournaments directory instead of everything else as well, to save space and bandwidth
     print("-- fetching osu wiki tournaments")
-    wiki_tournament_dirs = [wiki_tournaments_dir + "/" + t for t in tournaments]
+    wiki_tournament_dirs = [
+        wiki_tournaments_dir + "/" + t for t in tournaments]
     os.system(" && ".join([
         f"git clone --depth 1 --filter=blob:none --sparse {wiki_repo_url} {wiki_local_dir}",
         f"cd {wiki_local_dir}",
@@ -36,6 +37,9 @@ badges = []
 tournament_dir = os.path.join(wiki_local_dir, wiki_tournaments_dir)
 for tournament in os.listdir(tournament_dir):
     tour_path = os.path.join(tournament_dir, tournament)
+
+    if not os.path.isdir(tour_path):
+        continue
 
     for edition in os.listdir(tour_path):
         edition_path = os.path.join(tour_path, edition)
